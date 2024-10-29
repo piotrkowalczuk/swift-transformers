@@ -57,7 +57,7 @@ struct PreTokenizerFactory {
         guard let typeName = config.type?.stringValue else { return nil }
         let type = PreTokenizerType(rawValue: typeName)
         switch type {
-        case .Sequence : return PreTokenizerSequence(config: config)
+        case .Sequence: return PreTokenizerSequence(config: config)
         case .ByteLevel: return ByteLevelPreTokenizer(config: config)
         case .Punctuation: return PunctuationPreTokenizer(config: config)
         case .Digits: return DigitsPreTokenizer(config: config)

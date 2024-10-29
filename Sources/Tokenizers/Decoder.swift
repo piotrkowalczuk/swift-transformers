@@ -23,7 +23,7 @@ extension Decoder {
 
 enum DecoderType: String {
     case Sequence
-//    case WordPiece
+    case WordPiece
     case ByteLevel
     case Replace
     case ByteFallback
@@ -40,14 +40,15 @@ struct DecoderFactory {
         guard let typeName = config.type?.stringValue else { return nil }
         let type = DecoderType(rawValue: typeName)
         switch type {
-        case .Sequence    : return DecoderSequence(config: config)
-        case .ByteLevel   : return ByteLevelDecoder(config: config, addedTokens: addedTokens)
-        case .Replace     : return ReplaceDecoder(config: config)
+        case .Sequence: return DecoderSequence(config: config)
+        case .ByteLevel: return ByteLevelDecoder(config: config, addedTokens: addedTokens)
+        case .Replace: return ReplaceDecoder(config: config)
         case .ByteFallback: return ByteFallbackDecoder(config: config)
-        case .Fuse        : return FuseDecoder(config: config)
-        case .Strip       : return StripDecoder(config: config)
-        case .Metaspace   : return MetaspaceDecoder(config: config)
-        default           : fatalError("Unsupported Decoder type: \(typeName)")
+        case .Fuse: return FuseDecoder(config: config)
+        case .Strip: return StripDecoder(config: config)
+        case .Metaspace: return MetaspaceDecoder(config: config)
+        case .WordPiece: return MetaspaceDecoder(config: config)
+        default: fatalError("Unsupported Decoder type: \(typeName)")
         }
     }
 }
@@ -64,6 +65,53 @@ class DecoderSequence: Decoder {
         decoders.reduce(tokens) { current, decoder in
             decoder(tokens: current)
         }
+    }
+}
+
+class WordPieceDecoder: Decoder {
+    let cleanup: Bool
+    let prefix: String
+
+    required public init(config: Config) {
+        self.cleanup = config.cleanup?.boolValue ?? false
+        self.prefix = config.prefix?.stringValue ?? "##"
+    }
+
+    func decode(tokens: [String]) -> [String] {
+        var result: [String] = []
+        for (i, token) in tokens.enumerated() {
+            if i != 0 {
+                if token.starts(with: self.prefix) {
+                    result.append(String(token[self.prefix.endIndex..<token.endIndex]))
+                } else {
+                    result.append(" " + token)
+                }
+            } else {
+                result.append(token)
+            }
+
+            if self.cleanup {
+                if let last = result.last {
+                    result[result.count - 1] = self.cleanup(text: last)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private func cleanup(text: String) -> String {
+        return text.replacingOccurrences(of: " .", with: ".")
+            .replacingOccurrences(of: " ?", with: "?")
+            .replacingOccurrences(of: " !", with: "!")
+            .replacingOccurrences(of: " ,", with: ",")
+            .replacingOccurrences(of: " ' ", with: "'")
+            .replacingOccurrences(of: " n't", with: "n't")
+            .replacingOccurrences(of: " 'm", with: "'m")
+            .replacingOccurrences(of: " do not", with: "don't")
+            .replacingOccurrences(of: " 's", with: "'s")
+            .replacingOccurrences(of: " 've", with: "'ve")
+            .replacingOccurrences(of: " 're", with: "'re")
     }
 }
 

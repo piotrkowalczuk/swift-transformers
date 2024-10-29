@@ -24,4 +24,20 @@ class DecoderTests: XCTestCase {
             ["Hey", " my", " friend", " ", " <s>", " how", " are", " you"]
         )
     }
+
+    func testWordPieceDecoder() {
+        let decoder = WordPieceDecoder(
+            config: Config([
+                "cleanup": true,
+                "prefix": "##",
+            ]))
+
+        let tokens = ["##uelo", "Ara", "##új", "##o", "No", "##guera 's"]
+        let decoded = decoder.decode(tokens: tokens)
+
+        XCTAssertEqual(
+            decoded,
+            ["##uelo", " Ara", "új", "o", " No", "guera's"]
+        )
+    }
 }
