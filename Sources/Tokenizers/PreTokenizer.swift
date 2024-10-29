@@ -46,6 +46,7 @@ enum PreTokenizerType: String {
     case Whitespace
     case WhitespaceSplit
     case Metaspace
+    case BertPreTokenizer
     // Several more to be supported
     case Unknown = ""
 }
@@ -63,8 +64,69 @@ struct PreTokenizerFactory {
         case .Split: return SplitPreTokenizer(config: config)
         case .Whitespace, .WhitespaceSplit: return WhitespacePreTokenizer(config: config)
         case .Metaspace: return MetaspacePreTokenizer(config: config)
+        case .BertPreTokenizer: return BertPreTokenizer(config: config)
         default: fatalError("Unsupported PreTokenizer type: \(typeName)")
         }
+    }
+}
+
+class BertPreTokenizer: PreTokenizer {
+    required init(config: Config) {}
+
+    func preTokenize(text: String, options: PreTokenizerOptions = [.firstSection]) -> [String] {
+        var tokens: [String] = []
+        var currentToken = ""
+        var index = text.startIndex
+        var char: Character
+        
+        while index < text.endIndex {
+            char = text[index]
+            
+            if char.isWhitespace {
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+                index = text.index(after: index)
+                continue
+            }
+            if char.isASCIIPunctuation || char.isPunctuation {
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+                tokens.append(String(char))
+                index = text.index(after: index)
+                continue
+            }
+            if !char.isASCII {
+                // Non-ASCII character - treat as separate token
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+                tokens.append(String(char))
+                index = text.index(after: index)
+                continue
+            }
+            currentToken.append(char)
+            index = text.index(after: index)
+        }
+        if !currentToken.isEmpty {
+            tokens.append(currentToken)
+        }
+
+        return tokens
+    }
+
+    func capture(_ text: String, from: Int, to: Int) -> String? {
+        if let start = text.index(text.startIndex, offsetBy: from, limitedBy: text.endIndex),
+            let end = text.index(text.startIndex, offsetBy: to, limitedBy: text.endIndex)
+        {
+            return String(text[start..<end])
+        }
+
+        return nil
     }
 }
 
@@ -378,5 +440,35 @@ public extension String {
             let merged = mergedWithPrevious(ranges: ranges)
             return merged.map { String(self[$0]) }
         }
+    }
+}
+
+extension Unicode.Scalar.Properties {
+    var isPunctuation: Bool {
+        switch generalCategory {
+        case .connectorPunctuation,
+            .dashPunctuation,
+            .openPunctuation,
+            .closePunctuation,
+            .initialPunctuation,
+            .finalPunctuation,
+            .otherPunctuation:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+extension Character {
+    var isASCIIPunctuation: Bool {
+        guard self.unicodeScalars.count == 1, let scalar = self.unicodeScalars.first else {
+            return false
+        }
+        return scalar.isASCII && scalar.properties.isPunctuation
+    }
+
+    var isPunctuation: Bool {
+        return self.unicodeScalars.allSatisfy { $0.properties.isPunctuation }
     }
 }

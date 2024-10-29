@@ -10,6 +10,31 @@ import Hub
 
 class PreTokenizerTests: XCTestCase {
 
+    func testBertPreTokenizer() {
+        let preTokenizer = BertPreTokenizer(config: Config([:]))
+
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "Hey friend!"),
+            ["Hey", "friend", "!"]
+        )
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "Hey friend's"),
+            ["Hey", "friend", "'", "s"]
+        )
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "Hey friend!     How are you?!?"),
+            ["Hey", "friend", "!", "How", "are", "you", "?", "!", "?"]
+        )
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "   Hey,    friend,    what's up?  "),
+            ["Hey", ",", "friend", ",", "what", "'", "s", "up", "?"]
+        )
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "野口里佳 Noguchi Rika"),
+            ["野", "口", "里", "佳", "Noguchi", "Rika"]
+        )
+    }
+
     func testWhitespacePreTokenizer() {
         let preTokenizer = WhitespacePreTokenizer(config: Config([:]))
 
