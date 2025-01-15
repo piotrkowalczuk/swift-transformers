@@ -95,6 +95,19 @@ class GemmaUnicodeTests: XCTestCase {
     }
 }
 
+class PhiSimpleTests: XCTestCase {
+    func testPhi4() async throws {
+        guard let tokenizer = try await AutoTokenizer.from(pretrained: "microsoft/phi-4") as? PreTrainedTokenizer else {
+            XCTFail()
+            return
+        }
+
+        XCTAssertEqual(tokenizer.encode(text: "hello"), [15339])
+        XCTAssertEqual(tokenizer.encode(text: "hello world"), [15339, 1917])
+        XCTAssertEqual(tokenizer.encode(text: "<|im_start|>user<|im_sep|>Who are you?<|im_end|><|im_start|>assistant<|im_sep|>"), [100264, 882, 100266, 15546, 527, 499, 30, 100265, 100264, 78191, 100266])
+    }
+}
+
 
 struct EncodedTokenizerSamplesDataset: Decodable {
     let text: String
@@ -217,6 +230,10 @@ class TokenizerTester {
             XCTAssertEqual(
                 tokenizer.decode(tokens: edgeCase.encoded.input_ids),
                 edgeCase.decoded_with_special
+            )
+            XCTAssertEqual(
+                tokenizer.decode(tokens: edgeCase.encoded.input_ids, skipSpecialTokens: true),
+                edgeCase.decoded_without_special
             )
         }
     }

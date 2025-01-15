@@ -236,11 +236,10 @@ class ByteLevelPreTokenizer: PreTokenizer {
 }
 
 class PunctuationPreTokenizer: PreTokenizer {
-    let PUNCTUATION_REGEX = #"\p{P}\u0021-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E"#
     let re: String
 
     required init(config: Config) {
-        re = "[^\(PUNCTUATION_REGEX)]+|[\(PUNCTUATION_REGEX)]+"
+        re = "[^\(Constants.PUNCTUATION_REGEX)]+|[\(Constants.PUNCTUATION_REGEX)]+"
     }
 
     func preTokenize(text: String, options: PreTokenizerOptions = [.firstSection]) -> [String] {
@@ -286,7 +285,7 @@ extension StringSplitPattern {
     func split(_ text: String, invert: Bool = true) -> [String] {
         switch self {
         case .regexp(let regexp):
-            return text.split(by: regexp, includeSeparators: !invert)
+            return text.split(by: regexp, includeSeparators: true)
         case .string(let substring):
             return text.split(by: substring, options: [], includeSeparators: !invert)
         }
@@ -330,7 +329,9 @@ public extension String {
             start = range.upperBound
         }
         
-        result.append(String(self[start...]))
+        if omittingEmptySubsequences && start < endIndex {
+            result.append(String(self[start...]))
+        }
         return result
     }
 

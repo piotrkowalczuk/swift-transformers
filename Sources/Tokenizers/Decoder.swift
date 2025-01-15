@@ -44,12 +44,41 @@ struct DecoderFactory {
         case .ByteLevel: return ByteLevelDecoder(config: config, addedTokens: addedTokens)
         case .Replace: return ReplaceDecoder(config: config)
         case .ByteFallback: return ByteFallbackDecoder(config: config)
-        case .Fuse: return FuseDecoder(config: config)
-        case .Strip: return StripDecoder(config: config)
-        case .Metaspace: return MetaspaceDecoder(config: config)
-        case .WordPiece: return MetaspaceDecoder(config: config)
-        default: fatalError("Unsupported Decoder type: \(typeName)")
+        case .Fuse        : return FuseDecoder(config: config)
+        case .Strip       : return StripDecoder(config: config)
+        case .Metaspace   : return MetaspaceDecoder(config: config)
+        case .WordPiece   : return WordPieceDecoder(config: config)
+        default           : fatalError("Unsupported Decoder type: \(typeName)")
         }
+    }
+}
+
+class WordPieceDecoder: Decoder {
+    let prefix: String
+    let cleanup: Bool
+
+    // https://github.com/huggingface/tokenizers/blob/main/tokenizers/src/decoders/wordpiece.rs#L31
+    private let re = try! NSRegularExpression(pattern: "\\s(\\.|\\?|\\!|\\,|'|n't|'m|'s|'ve|'re)", options: [])
+
+    required public init(config: Config) {
+        guard let prefix = config.prefix?.stringValue else { fatalError("Missing `prefix` configuration for WordPieceDecoder.") }
+        self.prefix = prefix
+        self.cleanup = config.cleanup?.boolValue ?? false
+    }
+
+    func decode(tokens: [String]) -> [String] {
+        let firstToken = cleanup ? cleanUpTokenization(tokens.first!) : tokens.first!
+        return [firstToken] + tokens.dropFirst().map { token in
+            let token = token.hasPrefix(prefix) ? token.replacingCharacters(in: token.range(of: prefix)!, with: "") : " \(token)"
+            return cleanup ? cleanUpTokenization(token) : token
+        }
+    }
+
+    // https://github.com/huggingface/tokenizers/blob/main/tokenizers/src/decoders/wordpiece.rs#L40
+    private func cleanUpTokenization(_ token: String) -> String {
+        let range = NSRange(location: 0, length: token.utf16.count)
+        return re.stringByReplacingMatches(in: token, options: [], range: range, withTemplate: "$1")
+            .replacingOccurrences(of: " do not", with: " don't")
     }
 }
 
