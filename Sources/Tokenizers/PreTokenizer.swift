@@ -57,7 +57,7 @@ struct PreTokenizerFactory {
         guard let typeName = config.type?.stringValue else { return nil }
         let type = PreTokenizerType(rawValue: typeName)
         switch type {
-        case .Sequence : return PreTokenizerSequence(config: config)
+        case .Sequence: return PreTokenizerSequence(config: config)
         case .ByteLevel: return ByteLevelPreTokenizer(config: config)
         case .Punctuation: return PunctuationPreTokenizer(config: config)
         case .Digits: return DigitsPreTokenizer(config: config)
@@ -71,15 +71,52 @@ struct PreTokenizerFactory {
 }
 
 class BertPreTokenizer: PreTokenizer {
-    let re: String
-
-    required init(config: Config) {
-        // Ref: https://github.com/huggingface/transformers.js/blob/27920d84831e323275b38f0b5186644b7936e1a2/src/tokenizers.js#L1002
-        re = "[^\\s\(Constants.PUNCTUATION_REGEX)]+|[\(Constants.PUNCTUATION_REGEX)]"
-    }
+    required init(config: Config) {}
 
     func preTokenize(text: String, options: PreTokenizerOptions = [.firstSection]) -> [String] {
-        return text.ranges(of: re).map { String(text[$0]) }
+        var tokens: [String] = []
+        var currentToken = ""
+        var index = text.startIndex
+        var char: Character
+        
+        while index < text.endIndex {
+            char = text[index]
+            
+            if char.isWhitespace {
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+                index = text.index(after: index)
+                continue
+            }
+            if char.isASCIIPunctuation || char.isPunctuation {
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+                tokens.append(String(char))
+                index = text.index(after: index)
+                continue
+            }
+            currentToken.append(char)
+            index = text.index(after: index)
+        }
+        if !currentToken.isEmpty {
+            tokens.append(currentToken)
+        }
+
+        return tokens
+    }
+
+    func capture(_ text: String, from: Int, to: Int) -> String? {
+        if let start = text.index(text.startIndex, offsetBy: from, limitedBy: text.endIndex),
+            let end = text.index(text.startIndex, offsetBy: to, limitedBy: text.endIndex)
+        {
+            return String(text[start..<end])
+        }
+
+        return nil
     }
 }
 
@@ -394,5 +431,35 @@ public extension String {
             let merged = mergedWithPrevious(ranges: ranges)
             return merged.map { String(self[$0]) }
         }
+    }
+}
+
+extension Unicode.Scalar.Properties {
+    var isPunctuation: Bool {
+        switch generalCategory {
+        case .connectorPunctuation,
+            .dashPunctuation,
+            .openPunctuation,
+            .closePunctuation,
+            .initialPunctuation,
+            .finalPunctuation,
+            .otherPunctuation:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+extension Character {
+    var isASCIIPunctuation: Bool {
+        guard self.unicodeScalars.count == 1, let scalar = self.unicodeScalars.first else {
+            return false
+        }
+        return scalar.isASCII && scalar.properties.isPunctuation
+    }
+
+    var isPunctuation: Bool {
+        return self.unicodeScalars.allSatisfy { $0.properties.isPunctuation }
     }
 }
