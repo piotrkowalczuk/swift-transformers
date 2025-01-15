@@ -61,18 +61,20 @@ public protocol PreTrainedTokenizerModel: TokenizingModel {
 }
 
 struct TokenizerModel {
-    static let knownTokenizers: [String : PreTrainedTokenizerModel.Type] = [
-        "BertTokenizer"      : BertTokenizer.self,
-        "CodeGenTokenizer"   : CodeGenTokenizer.self,
-        "CodeLlamaTokenizer" : CodeLlamaTokenizer.self,
-        "FalconTokenizer"    : FalconTokenizer.self,
-        "GemmaTokenizer"     : GemmaTokenizer.self,
-        "GPT2Tokenizer"      : GPT2Tokenizer.self,
-        "LlamaTokenizer"     : LlamaTokenizer.self,
-        "T5Tokenizer"        : T5Tokenizer.self,
-        "WhisperTokenizer"   : WhisperTokenizer.self,
-        "CohereTokenizer"    : CohereTokenizer.self,
-        "PreTrainedTokenizer": BPETokenizer.self
+    static let knownTokenizers: [String: PreTrainedTokenizerModel.Type] = [
+        "BertTokenizer": BertTokenizer.self,
+        "DistilbertTokenizer": BertTokenizer.self, // inconsistency
+        "DistilBertTokenizer": BertTokenizer.self,
+        "CodeGenTokenizer": CodeGenTokenizer.self,
+        "CodeLlamaTokenizer": CodeLlamaTokenizer.self,
+        "FalconTokenizer": FalconTokenizer.self,
+        "GemmaTokenizer": GemmaTokenizer.self,
+        "GPT2Tokenizer": GPT2Tokenizer.self,
+        "LlamaTokenizer": LlamaTokenizer.self,
+        "T5Tokenizer": T5Tokenizer.self,
+        "WhisperTokenizer": WhisperTokenizer.self,
+        "CohereTokenizer": CohereTokenizer.self,
+        "PreTrainedTokenizer": BPETokenizer.self,
     ]
 
     static func unknownToken(from tokenizerConfig: Config) -> String? {
@@ -167,7 +169,7 @@ let specialTokenAttributes: [String] = [
     "pad_token",
     "cls_token",
     "mask_token",
-    "additional_special_tokens"
+    "additional_special_tokens",
 ]
 
 public class PreTrainedTokenizer: Tokenizer {
@@ -480,17 +482,16 @@ extension AutoTokenizer {
 
 // MARK: - Tokenizer model classes
 
-class GPT2Tokenizer     : BPETokenizer {}
-class FalconTokenizer   : BPETokenizer {}
-class LlamaTokenizer    : BPETokenizer {}
-class CodeGenTokenizer  : BPETokenizer {}
-class WhisperTokenizer  : BPETokenizer {}
-class GemmaTokenizer    : BPETokenizer {}
+class GPT2Tokenizer: BPETokenizer {}
+class FalconTokenizer: BPETokenizer {}
+class LlamaTokenizer: BPETokenizer {}
+class CodeGenTokenizer: BPETokenizer {}
+class WhisperTokenizer: BPETokenizer {}
+class GemmaTokenizer: BPETokenizer {}
 class CodeLlamaTokenizer: BPETokenizer {}
-class CohereTokenizer   : BPETokenizer {}
+class CohereTokenizer: BPETokenizer {}
 
-class T5Tokenizer       : UnigramTokenizer {}
-
+class T5Tokenizer: UnigramTokenizer {}
 
 // MARK: - PreTrainedTokenizer classes
 

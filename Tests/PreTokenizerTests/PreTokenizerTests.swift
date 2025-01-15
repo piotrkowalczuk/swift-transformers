@@ -4,8 +4,9 @@
 //  Created by Jan Krukowski on 23/11/2023.
 //
 
-import XCTest
 import Hub
+import XCTest
+
 @testable import Tokenizers
 
 class PreTokenizerTests: XCTestCase {
@@ -13,6 +14,10 @@ class PreTokenizerTests: XCTestCase {
     func testBertPreTokenizer() {
         let preTokenizer = BertPreTokenizer(config: Config([:]))
 
+        XCTAssertEqual(
+            preTokenizer.preTokenize(text: "mąka"),
+            ["mąka"]
+        )
         XCTAssertEqual(
             preTokenizer.preTokenize(text: "Hey friend!"),
             ["Hey", "friend", "!"]

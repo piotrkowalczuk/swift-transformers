@@ -99,16 +99,6 @@ class BertPreTokenizer: PreTokenizer {
                 index = text.index(after: index)
                 continue
             }
-            if !char.isASCII {
-                // Non-ASCII character - treat as separate token
-                if !currentToken.isEmpty {
-                    tokens.append(currentToken)
-                    currentToken = ""
-                }
-                tokens.append(String(char))
-                index = text.index(after: index)
-                continue
-            }
             currentToken.append(char)
             index = text.index(after: index)
         }
