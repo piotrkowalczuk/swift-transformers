@@ -157,6 +157,7 @@ class LocalFromPretrainedTests: XCTestCase {
     }
 }
 
+
 class BertDiacriticsTests: XCTestCase {
     func testBertCased() async throws {
         guard let tokenizer = try await AutoTokenizer.from(pretrained: "distilbert/distilbert-base-multilingual-cased") as? PreTrainedTokenizer else {
