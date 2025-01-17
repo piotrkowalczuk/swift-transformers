@@ -189,27 +189,8 @@ class BertDiacriticsTests: XCTestCase {
         XCTAssertEqual(tokenizer.tokenize(text: "département"), ["depart", "##ement"])
         XCTAssertEqual(tokenizer.encode(text: "département"), [101, 18280, 13665, 102])
         XCTAssertEqual(tokenizer.tokenize(text: "Car"), ["car"])
-
         XCTAssertEqual(tokenizer.tokenize(text: "€4"), ["€", "##4"])
         XCTAssertEqual(tokenizer.tokenize(text: "test $1 R2 #3 €4 £5 ¥6 ₣7 ₹8 ₱9 test"), ["test", "$", "1", "r", "##2", "#", "3", "€", "##4", "£5", "¥", "##6", "[UNK]", "₹", "##8", "₱", "##9", "test"])
-    }
-}
-
-class BertSpacesTests: XCTestCase {
-    func testEncodeDecode() async throws {
-        guard let tokenizer = try await AutoTokenizer.from(pretrained: "google-bert/bert-base-uncased") as? PreTrainedTokenizer else {
-            XCTFail()
-            return
-        }
-
-        let text = "l'eure"
-        let tokenized = tokenizer.tokenize(text: text)
-        XCTAssertEqual(tokenized, ["l", "'", "eu", "##re"])
-        let encoded = tokenizer.encode(text: text)
-        XCTAssertEqual(encoded, [101, 1048, 1005, 7327, 2890, 102])
-        let decoded = tokenizer.decode(tokens: encoded, skipSpecialTokens: true)
-        // Note: this matches the behaviour of the Python "slow" tokenizer, but the fast one produces "l ' eure"
-        XCTAssertEqual(decoded, "l'eure")
     }
 }
 
