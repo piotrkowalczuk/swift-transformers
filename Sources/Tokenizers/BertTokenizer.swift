@@ -9,7 +9,7 @@
 import Foundation
 import Hub
 
-public class BertTokenizer {
+final public class BertTokenizer {
     private let basicTokenizer: BasicTokenizer
     private let wordpieceTokenizer: WordpieceTokenizer
     private let maxLen = 512
@@ -18,10 +18,10 @@ public class BertTokenizer {
     private let vocab: [String: Int]
     private let ids_to_tokens: [Int: String]
 
-    public var bosToken: String?
-    public var bosTokenId: Int?
-    public var eosToken: String?
-    public var eosTokenId: Int?
+    public let bosToken: String?
+    public let bosTokenId: Int?
+    public let eosToken: String?
+    public let eosTokenId: Int?
 
     public let fuseUnknownTokens: Bool
 
@@ -156,7 +156,7 @@ extension BertTokenizer: PreTrainedTokenizerModel {
 }
 
 
-class BasicTokenizer {
+final class BasicTokenizer: Sendable {
     let doLowerCase: Bool
 
     init(doLowerCase: Bool = true) {
@@ -222,7 +222,7 @@ extension Character {
     }
 }
 
-class WordpieceTokenizer {
+final class WordpieceTokenizer: Sendable {
     let unkToken = "[UNK]"
     private let maxInputCharsPerWord = 100
     private let vocab: [String: Int]

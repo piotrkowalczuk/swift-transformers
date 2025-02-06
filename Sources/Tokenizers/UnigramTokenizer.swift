@@ -9,7 +9,7 @@
 import Foundation
 import Hub
 
-class UnigramTokenizer: PreTrainedTokenizerModel {
+final class UnigramTokenizer: PreTrainedTokenizerModel {    
     struct SentencePieceToken {
         var token: String
         var score: Float
@@ -23,7 +23,7 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
     public var unknownToken: String? { unknownPiece.token }
     
     let minScore: Float
-    let tokensToIds: [NSString: Int]
+    let tokensToIds: BinaryDistinctDictionary<Int>
 
     let bosToken: String? = " "
     let bosTokenId: Int?
@@ -66,18 +66,19 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
         self.unknownTokenId = unknownTokenId
         self.unknownPiece = SentencePieceToken(token: vocab[unknownTokenId].token, score: minScore - 10)
         
-        tokensToIds = Dictionary(uniqueKeysWithValues: vocab.map { $0.token as NSString }.enumerated().map { ($1, $0) })
-        bosTokenId = tokensToIds[bosToken! as NSString]      // May be nil
+        
+        tokensToIds = BinaryDistinctDictionary(Dictionary(uniqueKeysWithValues: vocab.map { BinaryDistinctString($0.token) }.enumerated().map { ($1, $0) })) // TODO: improve
+        bosTokenId = tokensToIds[BinaryDistinctString(bosToken!)]      // May be nil
 
         eosToken = tokenizerConfig.eosToken?.stringValue
-        eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken! as NSString]
+        eosTokenId = eosToken == nil ? nil : tokensToIds[BinaryDistinctString(eosToken!)]
 
         trie = Trie()
         trie.append(contentsOf: vocab.map { $0.token })
     }
 
     func convertTokenToId(_ token: String) -> Int? {
-        return tokensToIds[token as NSString] ?? self.unknownTokenId
+        return tokensToIds[BinaryDistinctString(token)] ?? self.unknownTokenId
     }
     
     func convertIdToToken(_ id: Int) -> String? {
@@ -95,8 +96,8 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
             var hasSingleNode = false
             
             let beginIndex = sentence.index(sentence.startIndex, offsetBy: beginPos)
-            for token in trie.commonPrefixSearchIterator(sentence[beginIndex...]).map({ String($0) }) {
-                guard let tokenId = tokensToIds[token as NSString] else { fatalError("Token not in vocab: \(token)") }
+            for token in trie.commonPrefixSearchIterator(sentence[beginIndex...]).map({ BinaryDistinctString(String($0)) }) {
+                guard let tokenId = tokensToIds[token] else { fatalError("Token not in vocab: \(token)") }
                 let tokenScore = vocab[tokenId].score
                 lattice.insert(startOffset: beginPos, length: token.count, score: tokenScore, tokenId: tokenId)
                 if !hasSingleNode && token.count == mblen {

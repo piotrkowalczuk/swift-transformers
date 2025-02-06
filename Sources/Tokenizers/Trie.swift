@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Trie<T: Hashable> {
+public struct Trie<T: Hashable>: Sendable where T: Sendable {
     public typealias Node = TrieNode<T>
     
     var root: Node
@@ -74,12 +74,12 @@ public extension Trie {
 }
 
 // TODO: maybe store the scores here if it's helpful?
-public class TrieNode<T: Hashable> {
+public struct TrieNode<T: Hashable>: Sendable where T: Sendable {
     var isLeaf: Bool = false
     var children: [T: TrieNode] = [:]
 }
 
-public struct LeavesWithCommonPrefixIterator<T: Hashable> : Sequence, IteratorProtocol {
+public struct LeavesWithCommonPrefixIterator<T: Hashable> : Sequence, IteratorProtocol where T: Sendable {
     var node: TrieNode<T>
     var text: any Sequence<T>
     var seq: [T] = []

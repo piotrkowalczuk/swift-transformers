@@ -5,8 +5,8 @@
 //  Created by Pedro Cuenca on 6/5/23.
 //
 
-import Hub
 import Foundation
+import Hub
 import Jinja
 
 public typealias Message = [String: Any]
@@ -23,7 +23,7 @@ public enum TokenizerError: Error {
     case mismatchedConfig(String)
 }
 
-public protocol TokenizingModel {
+public protocol TokenizingModel: Sendable {
     func tokenize(text: String) -> [String]
 
     // Alias for `tokenize`
@@ -72,32 +72,32 @@ public extension TokenizingModel {
 
 /// A tokenizer model that is set up with Hub configuration data
 public protocol PreTrainedTokenizerModel: TokenizingModel {
-    init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String : Int]) throws
+    init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String: Int]) throws
 }
 
-struct TokenizerModel {
-    static let knownTokenizers: [String : PreTrainedTokenizerModel.Type] = [
-        "BertTokenizer"      : BertTokenizer.self,
+struct TokenizerModel: Sendable {
+    static let knownTokenizers: [String: PreTrainedTokenizerModel.Type] = [
+        "BertTokenizer": BertTokenizer.self,
         "DistilbertTokenizer": BertTokenizer.self,
         "DistilBertTokenizer": BertTokenizer.self,
-        "CodeGenTokenizer"   : CodeGenTokenizer.self,
-        "CodeLlamaTokenizer" : CodeLlamaTokenizer.self,
-        "FalconTokenizer"    : FalconTokenizer.self,
-        "GemmaTokenizer"     : GemmaTokenizer.self,
-        "GPT2Tokenizer"      : GPT2Tokenizer.self,
-        "LlamaTokenizer"     : LlamaTokenizer.self,
-        "T5Tokenizer"        : T5Tokenizer.self,
-        "WhisperTokenizer"   : WhisperTokenizer.self,
-        "CohereTokenizer"    : CohereTokenizer.self,
-        "Qwen2Tokenizer"     : Qwen2Tokenizer.self,
-        "PreTrainedTokenizer": BPETokenizer.self
+        "CodeGenTokenizer": CodeGenTokenizer.self,
+        "CodeLlamaTokenizer": CodeLlamaTokenizer.self,
+        "FalconTokenizer": FalconTokenizer.self,
+        "GemmaTokenizer": GemmaTokenizer.self,
+        "GPT2Tokenizer": GPT2Tokenizer.self,
+        "LlamaTokenizer": LlamaTokenizer.self,
+        "T5Tokenizer": T5Tokenizer.self,
+        "WhisperTokenizer": WhisperTokenizer.self,
+        "CohereTokenizer": CohereTokenizer.self,
+        "Qwen2Tokenizer": Qwen2Tokenizer.self,
+        "PreTrainedTokenizer": BPETokenizer.self,
     ]
 
     static func unknownToken(from tokenizerConfig: Config) -> String? {
         return tokenizerConfig.unkToken?.content?.stringValue ?? tokenizerConfig.unkToken?.stringValue
     }
 
-    public static func from(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String : Int]) throws -> TokenizingModel {
+    public static func from(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String: Int]) throws -> TokenizingModel {
         guard let tokenizerClassName = tokenizerConfig.tokenizerClass?.stringValue else {
             throw TokenizerError.missingTokenizerClassInConfig
         }
@@ -119,7 +119,7 @@ public enum ChatTemplateArgument {
     case name(String)
 }
 
-public protocol Tokenizer {
+public protocol Tokenizer: Sendable {
     func tokenize(text: String) -> [String]
 
     /// Main entry point
@@ -205,20 +205,20 @@ extension Tokenizer {
     }
 }
 
-public extension Tokenizer {
-    func callAsFunction(_ text: String, addSpecialTokens: Bool = true) -> [Int] {
+extension Tokenizer {
+    public func callAsFunction(_ text: String, addSpecialTokens: Bool = true) -> [Int] {
         encode(text: text, addSpecialTokens: addSpecialTokens)
     }
-    
-    func decode(tokens: [Int]) -> String {
+
+    public func decode(tokens: [Int]) -> String {
         decode(tokens: tokens, skipSpecialTokens: false)
     }
 
-    func convertTokensToIds(_ tokens: [String]) -> [Int?] {
+    public func convertTokensToIds(_ tokens: [String]) -> [Int?] {
         return tokens.map { convertTokenToId($0) }
     }
 
-    func convertIdsToTokens(_ ids: [Int]) -> [String?] {
+    public func convertIdsToTokens(_ ids: [Int]) -> [String?] {
         return ids.map { convertIdToToken($0) }
     }
 }
@@ -231,7 +231,7 @@ let specialTokenAttributes: [String] = [
     "pad_token",
     "cls_token",
     "mask_token",
-    "additional_special_tokens"
+    "additional_special_tokens",
 ]
 
 public class PreTrainedTokenizer: Tokenizer {
@@ -258,8 +258,8 @@ public class PreTrainedTokenizer: Tokenizer {
     private let cleanUpTokenizationSpaces: Bool
 
     required public init(tokenizerConfig: Config, tokenizerData: Config) throws {
-        var addedTokens: [String : Int] = [:]
-        var specialTokens: [String : Int] = [:]
+        var addedTokens: [String: Int] = [:]
+        var specialTokens: [String: Int] = [:]
         for addedToken in tokenizerData.addedTokens?.arrayValue ?? [] {
             guard let id = addedToken.id?.intValue else { continue /* malformed: token with no id */ }
             guard let content = addedToken.content?.stringValue else { continue /* malformed: token with no content */ }
@@ -272,7 +272,7 @@ public class PreTrainedTokenizer: Tokenizer {
 
         // Convert to tuples for easier access, then sort by length (descending) to avoid early partial matches
         // (https://github.com/xenova/transformers.js/commit/c305c3824f628f1f02806a6310bd3b18b0f7f8f5)
-        let unwrappedAddedTokens : [(content: String, prefix: Bool, suffix: Bool)] = (tokenizerData.addedTokens?.arrayValue ?? []).compactMap { addedToken in
+        let unwrappedAddedTokens: [(content: String, prefix: Bool, suffix: Bool)] = (tokenizerData.addedTokens?.arrayValue ?? []).compactMap { addedToken in
             guard let content = addedToken.content?.stringValue else { return nil }
             let prefix = addedToken.lstrip?.boolValue ?? false
             let suffix = addedToken.rstrip?.boolValue ?? false
@@ -328,7 +328,8 @@ public class PreTrainedTokenizer: Tokenizer {
     func cleanUp(text: String) -> String {
         guard cleanUpTokenizationSpaces else { return text }
 
-        return text
+        return
+            text
             .replacingOccurrences(of: " .", with: ".")
             .replacingOccurrences(of: " ?", with: "?")
             .replacingOccurrences(of: " !", with: "!")
@@ -384,7 +385,8 @@ public class PreTrainedTokenizer: Tokenizer {
         let tokenStrings: [String]
         if skipSpecialTokens {
             let specialTokenIDs = Set(specialTokens.values)
-            tokenStrings = tokens
+            tokenStrings =
+                tokens
                 .filter { !specialTokenIDs.contains($0) }
                 .compactMap { model.convertIdToToken($0) }
         } else {
@@ -466,12 +468,13 @@ public class PreTrainedTokenizer: Tokenizer {
         } else if let valueFromConfig = tokenizerConfig.chatTemplate {
             if let arrayValue = valueFromConfig.arrayValue {
                 // If the config specifies a list of chat templates, convert them to a dictionary
-                let templateDict = Dictionary<String, String>(uniqueKeysWithValues: arrayValue.compactMap { item in
-                    guard let name = item.name?.stringValue, let template = item.template?.stringValue else {
-                        return nil
-                    }
-                    return (name, template)
-                })
+                let templateDict = [String: String](
+                    uniqueKeysWithValues: arrayValue.compactMap { item in
+                        guard let name = item.name?.stringValue, let template = item.template?.stringValue else {
+                            return nil
+                        }
+                        return (name, template)
+                    })
                 if let chatTemplate, case .name(let name) = chatTemplate {
                     // Select chat template from config by name
                     if let matchingDictEntry = templateDict[name] {
@@ -516,14 +519,14 @@ public class PreTrainedTokenizer: Tokenizer {
         }
 
         // TODO: maybe keep NSString here
-        for (key, value) in tokenizerConfig.dictionary as [String : Any] {
+        for (key, value) in tokenizerConfig.dictionary as [BinaryDistinctString: Any & Sendable] {
             if specialTokenAttributes.contains(key), !(value is NSNull) {
                 if let stringValue = value as? String {
-                    context[key] = stringValue
-                } else if let dictionary = value as? [NSString:Any] {
-                    context[key] = addedTokenAsString(Config(dictionary))
+                    context[key.string] = stringValue
+                } else if let dictionary = value as? [NSString: Any & Sendable] {
+                    context[key.string] = addedTokenAsString(Config(dictionary: dictionary))
                 } else {
-                    context[key] = value
+                    context[key.string] = value
                 }
             }
         }
@@ -549,7 +552,7 @@ public struct AutoTokenizer {}
 struct PreTrainedTokenizerClasses {
     /// Class overrides for custom behaviour
     /// Not to be confused with the TokenizerModel classes defined in TokenizerModel
-    static let tokenizerClasses: [String : PreTrainedTokenizer.Type] = [
+    static let tokenizerClasses: [String: PreTrainedTokenizer.Type] = [
         "LlamaTokenizer": LlamaPreTrainedTokenizer.self
     ]
 }
@@ -599,18 +602,17 @@ extension AutoTokenizer {
 
 // MARK: - Tokenizer model classes
 
-class GPT2Tokenizer     : BPETokenizer {}
-class FalconTokenizer   : BPETokenizer {}
-class LlamaTokenizer    : BPETokenizer {}
-class CodeGenTokenizer  : BPETokenizer {}
-class WhisperTokenizer  : BPETokenizer {}
-class GemmaTokenizer    : BPETokenizer {}
-class CodeLlamaTokenizer: BPETokenizer {}
-class CohereTokenizer   : BPETokenizer {}
-class Qwen2Tokenizer    : BPETokenizer {}
+class GPT2Tokenizer: BPETokenizer, Sendable {}
+class FalconTokenizer: BPETokenizer, Sendable {}
+class LlamaTokenizer: BPETokenizer, Sendable {}
+class CodeGenTokenizer: BPETokenizer, Sendable {}
+class WhisperTokenizer: BPETokenizer, Sendable {}
+class GemmaTokenizer: BPETokenizer, Sendable {}
+class CodeLlamaTokenizer: BPETokenizer, Sendable {}
+class CohereTokenizer: BPETokenizer, Sendable {}
+class Qwen2Tokenizer: BPETokenizer, Sendable {}
 
-class T5Tokenizer       : UnigramTokenizer {}
-
+class T5Tokenizer: UnigramTokenizer {}
 
 // MARK: - PreTrainedTokenizer classes
 
@@ -660,7 +662,7 @@ func maybeUpdatePostProcessor(tokenizerConfig: Config, processorConfig: Config?)
 }
 
 // See https://github.com/xenova/transformers.js/blob/1a9964fb09b8f54fcbeac46dc6aae8d76795809d/src/tokenizers.js#L3203 for these exceptions
-class LlamaPreTrainedTokenizer: PreTrainedTokenizer {
+final class LlamaPreTrainedTokenizer: PreTrainedTokenizer {
     let isLegacy: Bool
 
     required init(tokenizerConfig: Config, tokenizerData: Config) throws {
@@ -668,14 +670,16 @@ class LlamaPreTrainedTokenizer: PreTrainedTokenizer {
         var configDictionary = tokenizerData.dictionary
         if !isLegacy {
             configDictionary.removeValue(forKey: "normalizer")
-            configDictionary["pre_tokenizer"] = ["type": "Metaspace", "replacement": sentencePieceUnderline, "add_prefix_space": true, "prepend_scheme": "first"]
+            configDictionary["pre_tokenizer"] = BinaryDistinctDictionary<Hashable & Sendable>(
+                dictionary: ["type": "Metaspace", "replacement": sentencePieceUnderline, "add_prefix_space": true, "prepend_scheme": "first"]
+                    as [String: Sendable])
         }
 
         if let postProcessorConfig = try maybeUpdatePostProcessor(tokenizerConfig: tokenizerConfig, processorConfig: tokenizerData.postProcessor) {
             configDictionary["post_processor"] = postProcessorConfig.dictionary
         }
 
-        let updatedData = Config(configDictionary)
+        let updatedData = Config(dictionary: configDictionary)
         try super.init(tokenizerConfig: tokenizerConfig, tokenizerData: updatedData)
     }
 }

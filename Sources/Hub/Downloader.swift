@@ -9,17 +9,17 @@
 import Foundation
 import Combine
 
-class Downloader: NSObject, ObservableObject {
-    private(set) var destination: URL
+final class Downloader: NSObject, ObservableObject {
+    public let destination: URL
 
-    enum DownloadState {
+    enum DownloadState: Sendable {
         case notStarted
         case downloading(Double)
         case completed(URL)
         case failed(Error)
     }
 
-    enum DownloadError: Error {
+    enum DownloadError: Error, Sendable {
         case invalidDownloadLocation
         case unexpectedError
     }

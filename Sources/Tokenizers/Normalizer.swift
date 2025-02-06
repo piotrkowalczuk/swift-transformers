@@ -8,7 +8,7 @@
 import Foundation
 import Hub
 
-public protocol Normalizer {
+public protocol Normalizer: Sendable {
     func normalize(text: String) -> String
     func callAsFunction(text: String) -> String
 
@@ -61,7 +61,7 @@ struct NormalizerFactory {
     }
 }
 
-class NormalizerSequence: Normalizer {
+final class NormalizerSequence: Normalizer {
     let normalizers: [Normalizer]
 
     required public init(config: Config) {
@@ -78,7 +78,7 @@ class NormalizerSequence: Normalizer {
     }
 }
 
-class PrependNormalizer: Normalizer {
+final class PrependNormalizer: Normalizer {
     let prepend: String
 
     required public init(config: Config) {
@@ -90,7 +90,7 @@ class PrependNormalizer: Normalizer {
     }
 }
 
-class ReplaceNormalizer: Normalizer {
+final class ReplaceNormalizer: Normalizer {
     let pattern: StringReplacePattern?
 
     required public init(config: Config) {
@@ -103,7 +103,7 @@ class ReplaceNormalizer: Normalizer {
     }
 }
 
-class LowercaseNormalizer: Normalizer {
+final class LowercaseNormalizer: Normalizer {
     required public init(config: Config) {}
 
     public func normalize(text: String) -> String {
@@ -111,7 +111,7 @@ class LowercaseNormalizer: Normalizer {
     }
 }
 
-class NFDNormalizer: Normalizer {
+final class NFDNormalizer: Normalizer {
     required public init(config: Config) {}
 
     public func normalize(text: String) -> String {
@@ -119,7 +119,7 @@ class NFDNormalizer: Normalizer {
     }
 }
 
-class NFCNormalizer: Normalizer {
+final class NFCNormalizer: Normalizer {
     required public init(config: Config) {}
 
     public func normalize(text: String) -> String {
@@ -127,7 +127,7 @@ class NFCNormalizer: Normalizer {
     }
 }
 
-class NFKDNormalizer: Normalizer {
+final class NFKDNormalizer: Normalizer {
     required init(config: Config) {}
 
     func normalize(text: String) -> String {
@@ -135,7 +135,7 @@ class NFKDNormalizer: Normalizer {
     }
 }
 
-class NFKCNormalizer: Normalizer {
+final class NFKCNormalizer: Normalizer {
     required init(config: Config) {}
 
     func normalize(text: String) -> String {
@@ -143,7 +143,7 @@ class NFKCNormalizer: Normalizer {
     }
 }
 
-class BertNormalizer: Normalizer {
+final class BertNormalizer: Normalizer {
     let shouldCleanText: Bool
     let shouldHandleChineseChars: Bool
     let shouldStripAccents: Bool
@@ -226,7 +226,7 @@ class BertNormalizer: Normalizer {
     }
 }
 
-class PrecompiledNormalizer: Normalizer {
+final class PrecompiledNormalizer: Normalizer {
     // TODO: use `precompiledCharsmap` (base64-encoded string) from the configuration
     required init(config: Config) {}
 
@@ -268,7 +268,7 @@ class PrecompiledNormalizer: Normalizer {
     }
 }
 
-class StripAccentsNormalizer: Normalizer {
+final class StripAccentsNormalizer: Normalizer {
     required init(config: Config) {}
 
     func normalize(text: String) -> String {
@@ -276,7 +276,7 @@ class StripAccentsNormalizer: Normalizer {
     }
 }
 
-class StripNormalizer: Normalizer {
+final class StripNormalizer: Normalizer {
     let leftStrip: Bool
     let rightStrip: Bool
 

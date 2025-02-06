@@ -8,7 +8,7 @@
 import Foundation
 import Hub
 
-public protocol Decoder {
+public protocol Decoder: Sendable {
     func decode(tokens: [String]) -> [String]
     func callAsFunction(tokens: [String]) -> [String]
     
@@ -53,7 +53,7 @@ struct DecoderFactory {
     }
 }
 
-class WordPieceDecoder: Decoder {
+final class WordPieceDecoder: Decoder {
     let prefix: String
     let cleanup: Bool
 
@@ -82,7 +82,7 @@ class WordPieceDecoder: Decoder {
     }
 }
 
-class DecoderSequence: Decoder {
+final class DecoderSequence: Decoder {
     let decoders: [Decoder]
     
     required public init(config: Config) {
@@ -97,7 +97,7 @@ class DecoderSequence: Decoder {
     }
 }
 
-class ByteLevelDecoder: Decoder {
+final class ByteLevelDecoder: Decoder {
     let addedTokens: Set<String>
     
     required public init(config: Config) {
@@ -139,7 +139,7 @@ class ByteLevelDecoder: Decoder {
     }
 }
 
-class ReplaceDecoder: Decoder {
+final class ReplaceDecoder: Decoder {
     let pattern: StringReplacePattern?
     
     required public init(config: Config) {
@@ -152,7 +152,7 @@ class ReplaceDecoder: Decoder {
     }
 }
 
-class ByteFallbackDecoder: Decoder {
+final class ByteFallbackDecoder: Decoder {
     required public init(config: Config) {}
     
     func decode(tokens: [String]) -> [String] {
@@ -185,7 +185,7 @@ class ByteFallbackDecoder: Decoder {
     }
 }
 
-class FuseDecoder: Decoder {
+final class FuseDecoder: Decoder {
     required public init(config: Config) {}
     
     func decode(tokens: [String]) -> [String] {
@@ -193,7 +193,7 @@ class FuseDecoder: Decoder {
     }
 }
 
-class StripDecoder: Decoder {
+final class StripDecoder: Decoder {
     let content: String
     let start: Int
     let stop: Int
@@ -214,7 +214,7 @@ class StripDecoder: Decoder {
     }
 }
 
-class MetaspaceDecoder: Decoder {
+final class MetaspaceDecoder: Decoder {
     let addPrefixSpace: Bool
     let replacement: String
     
