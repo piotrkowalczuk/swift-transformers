@@ -9,7 +9,7 @@ import Foundation
 import CryptoKit
 import os
 
-public struct HubApi {
+public struct HubApi: Sendable {
     var downloadBase: URL
     var hfToken: String?
     var endpoint: String
@@ -177,8 +177,8 @@ public extension HubApi {
     func configuration(fileURL: URL) throws -> Config {
         let data = try Data(contentsOf: fileURL)
         let parsed = try JSONSerialization.jsonObject(with: data, options: [])
-        guard let dictionary = parsed as? [NSString: Any] else { throw Hub.HubClientError.parse }
-        return Config(dictionary)
+        guard let dictionary = parsed as? [BinaryDistinctString: Sendable] else { throw Hub.HubClientError.parse }
+        return Config(dictionary: dictionary)
     }
 }
 
@@ -191,8 +191,8 @@ public extension HubApi {
         let (data, _) = try await httpGet(for: url)
 
         let parsed = try JSONSerialization.jsonObject(with: data, options: [])
-        guard let dictionary = parsed as? [NSString: Any] else { throw Hub.HubClientError.parse }
-        return Config(dictionary)
+        guard let dictionary = parsed as? [BinaryDistinctString: Sendable] else { throw Hub.HubClientError.parse }
+        return Config(dictionary: dictionary)
     }
 }
 

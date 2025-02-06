@@ -9,19 +9,18 @@
 import Foundation
 import Combine
 
-class Downloader: NSObject, ObservableObject {
-    private(set) var destination: URL
-
+final class Downloader: NSObject, ObservableObject {
+    public let destination: URL
     private let chunkSize = 10 * 1024 * 1024  // 10MB
 
-    enum DownloadState {
+    enum DownloadState: Sendable {
         case notStarted
         case downloading(Double)
         case completed(URL)
         case failed(Error)
     }
 
-    enum DownloadError: Error {
+    enum DownloadError: Error, Sendable {
         case invalidDownloadLocation
         case unexpectedError
     }
