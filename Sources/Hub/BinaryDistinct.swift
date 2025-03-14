@@ -160,142 +160,40 @@ extension BinaryDistinctString {
     }
 }
 
-public struct BinaryDistinctDictionary<V>: Collection, ExpressibleByDictionaryLiteral, Sendable where V: Any, V: Sendable, V: Hashable {
-    public typealias Key = BinaryDistinctString
-
-    public var storage: [Key: V] = [:]
-
-    // MARK: - Initializers
-    public init(_ dictionary: [Key: V] = [:]) {
-        self.storage = dictionary
-    }
-
-    /// Initializes from `[String: Value]`
-    public init(_ dictionary: [String: V]) {
-        self.storage = Dictionary(uniqueKeysWithValues: dictionary.map { (BinaryDistinctString($0.key), $0.value) })
-    }
-
-    /// Initializes from `[NSString: Value]`
-    public init(_ dictionary: [NSString: V]) {
-        self.storage = Dictionary(uniqueKeysWithValues: dictionary.map { (BinaryDistinctString($0.key), $0.value) })
-    }
-
-    public init(dictionaryLiteral elements: (Key, V)...) {
-        self.storage = Dictionary(uniqueKeysWithValues: elements)
-    }
-
-    // MARK: - Dictionary Operations
-    public subscript(key: Key) -> V? {
-        get { return storage[key] }
-        set { storage[key] = newValue }
-    }
-
-    public var keys: [Key] {
-        return Array(storage.keys)
-    }
-
-    public var values: [V] {
-        return Array(storage.values)
-    }
-
-    // MARK: - Collection Conformance
-    public typealias Index = Dictionary<Key, V>.Index
-    public typealias Element = (key: Key, value: V)
-
-    public var startIndex: Index { storage.startIndex }
-    public var endIndex: Index { storage.endIndex }
-
-    public func index(after i: Index) -> Index {
-        return storage.index(after: i)
-    }
-
-    public subscript(position: Index) -> Element {
-        return storage[position]
-    }
-
-    /// Returns a new dictionary with keys mapped to the requested type.
-    public func mapKeys<K: StringConvertible>(_ type: K.Type) -> [K: V] {
-        return Dictionary(
-            uniqueKeysWithValues: storage.map {
-                (K.self == String.self ? $0.key.string as! K : $0.key.nsString as! K, $0.value)
-            }
-        )
-    }
-    
-    mutating public func removeValue(forKey key: Key) -> V? {
-        return self.storage.removeValue(forKey: key)
-    }
-
-    // MARK: - Merging Methods
-
+extension Dictionary where Key == BinaryDistinctString {
     /// Merges another `BinaryDistinctDictionary` into this one
-    public mutating func merge(_ other: BinaryDistinctDictionary<Value>, strategy: (V, V) -> V = { _, new in new }) {
-        self.storage.merge(other.storage, uniquingKeysWith: strategy)
-    }
-
-    /// Merges a `[String: Value]` dictionary into this one
-    public mutating func merge(_ other: [BinaryDistinctString: V], strategy: (V, V) -> V = { _, new in new }) {
-        let converted = Dictionary(uniqueKeysWithValues: other.map { ($0.key, $0.value) })
-        self.storage.merge(converted, uniquingKeysWith: strategy)
+    public mutating func merge(_ other: [BinaryDistinctString: Value], strategy: (Value, Value) -> Value = { _, new in new }) {
+        self.merge(other, uniquingKeysWith: strategy)
     }
     
     /// Merges a `[String: Value]` dictionary into this one
-    public mutating func merge(_ other: [String: V], strategy: (V, V) -> V = { _, new in new }) {
+    public mutating func merge(_ other: [String: Value], strategy: (Value, Value) -> Value = { _, new in new }) {
         let converted = Dictionary(uniqueKeysWithValues: other.map { (BinaryDistinctString($0.key), $0.value) })
-        self.storage.merge(converted, uniquingKeysWith: strategy)
+        self.merge(converted, uniquingKeysWith: strategy)
     }
 
     /// Merges a `[NSString: Value]` dictionary into this one
-    public mutating func merge(_ other: [NSString: V], strategy: (V, V) -> V = { _, new in new }) {
+    public mutating func merge(_ other: [NSString: Value], strategy: (Value, Value) -> Value = { _, new in new }) {
         let converted = Dictionary(uniqueKeysWithValues: other.map { (BinaryDistinctString($0.key), $0.value) })
-        self.storage.merge(converted, uniquingKeysWith: strategy)
+        self.merge(converted, uniquingKeysWith: strategy)
     }
 
-    /// Returns a new dictionary by merging `other` while keeping the current dictionary unchanged.
-    public func merging(_ other: BinaryDistinctDictionary<V>, strategy: (V, V) -> V = { _, new in new }) -> BinaryDistinctDictionary {
-        var newDict = self
-        newDict.merge(other, strategy: strategy)
-        return newDict
-    }
-
-    public func merging(_ other: [String: V], strategy: (V, V) -> V = { _, new in new }) -> BinaryDistinctDictionary {
+    public func merging(_ other: [String: Value], strategy: (Value, Value) -> Value = { _, new in new }) -> Self {
         var newDict = self
         newDict.merge(other, strategy: strategy)
         return newDict
     }
     
-    public func merging(_ other: [BinaryDistinctString: V], strategy: (V, V) -> V = { _, new in new }) -> BinaryDistinctDictionary {
+    public func merging(_ other: [BinaryDistinctString: Value], strategy: (Value, Value) -> Value = { _, new in new }) -> Self {
         var newDict = self
         newDict.merge(other, strategy: strategy)
         return newDict
     }
 
-    public func merging(_ other: [NSString: V], strategy: (V, V) -> V = { _, new in new }) -> BinaryDistinctDictionary {
+    public func merging(_ other: [NSString: Value], strategy: (Value, Value) -> Value = { _, new in new }) -> Self {
         var newDict = self
         newDict.merge(other, strategy: strategy)
         return newDict
-    }
-
-    public func invert() -> [V: BinaryDistinctString] {
-        var inverted: [V: BinaryDistinctString] = [:]
-        for (k, v) in self.storage {
-            inverted[v] = k
-        }
-        return inverted
-    }
-}
-
-extension BinaryDistinctDictionary: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        // Combine the count to distinguish between dictionaries of different sizes.
-        hasher.combine(self.storage.count)
-        // Sort keys for a deterministic order.
-        for key in self.storage.keys.sorted() {
-            hasher.combine(key)
-            if let value = self.storage[key] {
-                hasher.combine(value)
-            }
-        }
     }
 }
 

@@ -3,16 +3,9 @@
 //  swift-transformers
 //
 //  Created by Piotr Kowalczuk on 06.03.25.
-//
-
-//
-//  Config.swift
-//  swift-transformers
-//
-//  Created by Piotr Kowalczuk on 06.03.25.
-//
 
 import Foundation
+import OrderedCollections
 
 // MARK: - Configuration files with dynamic lookup
 
@@ -23,7 +16,8 @@ public struct Config: Hashable, Sendable,
     ExpressibleByFloatLiteral,
     ExpressibleByDictionaryLiteral,
     ExpressibleByArrayLiteral,
-    ExpressibleByExtendedGraphemeClusterLiteral
+    ExpressibleByExtendedGraphemeClusterLiteral,
+    CustomStringConvertible
 {
     public typealias Key = BinaryDistinctString
     public typealias Value = Config
@@ -36,7 +30,7 @@ public struct Config: Hashable, Sendable,
         case integer(Int)
         case boolean(Bool)
         case floating(Float)
-        case dictionary(BinaryDistinctDictionary<Config>)
+        case dictionary([BinaryDistinctString: Config])
         case array([Config])
         case token((UInt, BinaryDistinctString))
 
@@ -60,9 +54,30 @@ public struct Config: Hashable, Sendable,
                 return false
             }
         }
+
+        public var description: String {
+            switch self {
+            case .null:
+                return "null"
+            case .string(let value):
+                return "\"\(value)\""
+            case .integer(let value):
+                return "\(value)"
+            case .boolean(let value):
+                return "\(value)"
+            case .floating(let value):
+                return "\(value)"
+            case .array(let arr):
+                return "[\(arr)]"
+            case .dictionary(let val):
+                return "{\(val)}"
+            case .token(let val):
+                return "(\(val.0), \(val.1))"
+            }
+        }
     }
 
-    private init() {
+    init() {
         self.value = .null
     }
 
@@ -91,14 +106,14 @@ public struct Config: Hashable, Sendable,
     }
 
     public init(_ values: (BinaryDistinctString, Config)...) {
-        var dict = BinaryDistinctDictionary<Config>()
+        var dict = [BinaryDistinctString: Config]()
         for (key, value) in values {
             dict[key] = value
         }
         self.value = .dictionary(dict)
     }
 
-    public init(_ value: BinaryDistinctDictionary<Config>) {
+    public init(_ value: [BinaryDistinctString: Config]) {
         self.value = .dictionary(value)
     }
 
@@ -112,10 +127,6 @@ public struct Config: Hashable, Sendable,
 
     public init(_ dictionary: [NSString: Config]) {
         self.value = Config.convertToBinaryDistinctKeys(dictionary as Any).value
-    }
-
-    public init(_ dictionary: [BinaryDistinctString: Config]) {
-        self.value = .dictionary(BinaryDistinctDictionary<Config>(dictionary))
     }
 
     public init(_ token: (UInt, BinaryDistinctString)) {
@@ -178,7 +189,7 @@ public struct Config: Hashable, Sendable,
     }
 
     public init(dictionaryLiteral elements: (BinaryDistinctString, Config)...) {
-        let dict = elements.reduce(into: BinaryDistinctDictionary<Config>()) { result, element in
+        let dict = elements.reduce(into: [BinaryDistinctString: Config]()) { result, element in
             result[element.0] = element.1
         }
 
@@ -303,7 +314,7 @@ public struct Config: Hashable, Sendable,
         return or
     }
 
-    // MARK: getters - floating
+    // MARK: getters/operators - floating
 
     public func get() -> Float? {
         return self.floating()
@@ -344,22 +355,47 @@ public struct Config: Hashable, Sendable,
         return nil
     }
 
-    public func get() -> BinaryDistinctDictionary<Config>? {
+    public func get() -> [BinaryDistinctString: Config]? {
         return self.dictionary()
     }
 
-    public func get(or: BinaryDistinctDictionary<Config>) -> BinaryDistinctDictionary<Config> {
+    public func get(or: [BinaryDistinctString: Config]) -> [BinaryDistinctString: Config] {
         return self.dictionary(or: or)
     }
 
-    public func dictionary() -> BinaryDistinctDictionary<Config>? {
+    public func toJinjaCompatible() -> Any? {
+        switch self.value {
+        case .array(let val):
+            return val.map { $0.toJinjaCompatible() }
+        case .dictionary(let val):
+            var result: [String: Any?] = [:]
+            for (key, config) in val {
+                result[key.string] = config.toJinjaCompatible()
+            }
+            return result
+        case .boolean(let val):
+            return val
+        case .floating(let val):
+            return val
+        case .integer(let val):
+            return val
+        case .string(let val):
+            return val.string
+        case .token(let val):
+            return [String(val.0): val.1.string] as [String: String]
+        case .null:
+            return nil
+        }
+    }
+
+    public func dictionary() -> [BinaryDistinctString: Config]? {
         if case .dictionary(let val) = self.value {
             return val
         }
         return nil
     }
 
-    public func dictionary(or: BinaryDistinctDictionary<Config>) -> BinaryDistinctDictionary<Config> {
+    public func dictionary(or: [BinaryDistinctString: Config]) -> [BinaryDistinctString: Config] {
         if let val = self.dictionary() {
             return val
         }
@@ -466,6 +502,16 @@ public struct Config: Hashable, Sendable,
         }
     }
 
+    public subscript(index: Int) -> Config {
+        get {
+            if let arr = self.array(), index >= 0, index < arr.count {
+                return arr[index]
+            }
+
+            return Config()
+        }
+    }
+
     func uncamelCase(_ string: BinaryDistinctString) -> BinaryDistinctString {
         let scalars = string.string.unicodeScalars
         var result = ""
@@ -487,9 +533,164 @@ public struct Config: Hashable, Sendable,
 
         return BinaryDistinctString(result)
     }
-    
+
     public var description: String {
         return "\(self.value.description)"
+    }
+}
+
+extension Config: Codable {
+    public init(from decoder: any Decoder) throws {
+        // Try decoding as a single value first (for scalars and null)
+        let singleValueContainer = try? decoder.singleValueContainer()
+        if let container = singleValueContainer {
+            if container.decodeNil() {
+                self.value = .null
+                return
+            }
+            do {
+                let intValue = try container.decode(Int.self)
+                self.value = .integer(intValue)
+                return
+            } catch {
+            }
+            do {
+                let floatValue = try container.decode(Float.self)
+                self.value = .floating(floatValue)
+                return
+            } catch {
+            }
+            do {
+                let boolValue = try container.decode(Bool.self)
+                self.value = .boolean(boolValue)
+                return
+            } catch {
+            }
+            do {
+                let stringValue = try container.decode(String.self)
+                self.value = .string(.init(stringValue))
+                return
+            } catch {
+
+            }
+        }
+
+        if let tupple = Self.decodeTuple(decoder) {
+            self.value = tupple
+            return
+        }
+        if let array = Self.decodeArray(decoder) {
+            self.value = array
+            return
+        }
+
+        if let dict = Self.decodeDictionary(decoder) {
+            self.value = dict
+            return
+        }
+
+        self.value = .null
+    }
+
+    private static func decodeTuple(_ decoder: Decoder) -> Data? {
+        let unkeyedContainer = try? decoder.unkeyedContainer()
+        if var container = unkeyedContainer {
+            if container.count == 2 {
+                do {
+                    let intValue = try container.decode(UInt.self)
+                    let stringValue = try container.decode(String.self)
+                    return .token((intValue, .init(stringValue)))
+                } catch {
+
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func decodeArray(_ decoder: Decoder) -> Data? {
+        do {
+            if var container = try? decoder.unkeyedContainer() {
+                var elements: [Config] = []
+                while !container.isAtEnd {
+                    let element = try container.decode(Config.self)
+                    elements.append(element)
+                }
+                return .array(elements)
+            }
+        } catch {
+
+        }
+        return nil
+    }
+
+    private static func decodeDictionary(_ decoder: Decoder) -> Data? {
+        do {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            var dictionaryValues: [BinaryDistinctString: Config] = [:]
+            for key in container.allKeys {
+                let value = try container.decode(Config.self, forKey: key)
+                dictionaryValues[BinaryDistinctString(key.stringValue)] = value
+            }
+
+            return .dictionary(dictionaryValues)
+        } catch {
+            return nil
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        switch self.value {
+        case .null:
+            var container = encoder.singleValueContainer()
+            try container.encodeNil()
+        case .integer(let val):
+            var container = encoder.singleValueContainer()
+            try container.encode(val)
+        case .floating(let val):
+            var container = encoder.singleValueContainer()
+            try container.encode(val)
+        case .boolean(let val):
+            var container = encoder.singleValueContainer()
+            try container.encode(val)
+        case .string(let val):
+            var container = encoder.singleValueContainer()
+            try container.encode(val.string)
+        case .dictionary(let val):
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            for (key, value) in val {
+                try container.encode(value, forKey: CodingKeys(stringValue: key.string)!)
+            }
+        case .array(let val):
+            var container = encoder.unkeyedContainer()
+            try container.encode(contentsOf: val)
+        case .token(let val):
+            var tupple = encoder.unkeyedContainer()
+            try tupple.encode(val.0)
+            try tupple.encode(val.1.string)
+        }
+    }
+
+    private struct CodingKeys: CodingKey {
+        var stringValue: String
+        init?(stringValue: String) {
+            self.stringValue = stringValue
+        }
+
+        var intValue: Int? { nil }
+        init?(intValue: Int) { nil }
+    }
+}
+
+extension Config: Equatable {
+    public static func == (lhs: Config, rhs: Config) -> Bool {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        guard let lhsData = try? encoder.encode(lhs),
+            let rhsData = try? encoder.encode(rhs)
+        else { return false }
+        return lhsData == rhsData
     }
 }
 
@@ -522,27 +723,6 @@ extension Config.Data: Hashable {
             hasher.combine(7)  // Discriminator for token
             a.0.hash(into: &hasher)
             a.1.hash(into: &hasher)
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .null:
-            return "null"
-        case .string(let s):
-            return "\"\(s)\""
-        case .integer(let i):
-            return "\(i)"
-        case .boolean(let b):
-            return "\(b)"
-            case .floating(let f):
-            return "\(f)"
-        case .dictionary(let d):
-            return "\(d)"
-        case .array(let a):
-            return "[\(a.map(\.description).joined(separator: ", "))]"
-        case .token(let a):
-            return "\(a.0):\(a.1)"
         }
     }
 }
