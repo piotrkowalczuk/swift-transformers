@@ -6,94 +6,12 @@
 //
 
 import Foundation
-import Testing
 import Jinja
+import Testing
 
 @testable import Hub
 
 @Suite struct ConfigGeneral {
-    func string() async throws {
-        let cfg = Config("a")
-
-        #expect(cfg == "a")
-        #expect(cfg.get() == "a")
-        #expect(cfg.get(or: "b") == "a")
-        #expect(cfg.string() == "a")
-        #expect(cfg.string(or: "b") == "a")
-        #expect(cfg.get() == BinaryDistinctString("a"))
-        #expect(cfg.get(or: "b") == BinaryDistinctString("a"))
-        #expect(cfg.binaryDistinctString() == "a")
-        #expect(cfg.binaryDistinctString(or: "b") == "a")
-    }
-
-    func integer() async throws {
-        let cfg = Config(1)
-
-        #expect(cfg == 1)
-        #expect(cfg.get() == 1)
-        #expect(cfg.get(or: 2) == 1)
-        #expect(cfg.integer() == 1)
-        #expect(cfg.integer(or: 2) == 1)
-    }
-
-    @Test(arguments: [
-        (Config(1.1), 1.1 as Float),
-        (Config(1), 1.0 as Float),
-    ])
-    func floating(cfg: Config, exp: Float) async throws {
-        #expect(cfg == .init(exp))
-        #expect(cfg.get() == exp)
-        #expect(cfg.get(or: 2.2) == exp)
-        #expect(cfg.floating() == exp)
-        #expect(cfg.floating(or: 2.2) == exp)
-    }
-
-    @Test(arguments: [
-        (Config(true), true),
-        (Config(1), true),
-        (Config("T"), true),
-        (Config("t"), true),
-        (Config("TRUE"), true),
-        (Config("True"), true),
-        (Config("true"), true),
-        (Config("F"), false),
-        (Config("f"), false),
-        (Config("FALSE"), false),
-        (Config("False"), false),
-        (Config("false"), false),
-    ])
-    func boolean(cfg: Config, exp: Bool) async throws {
-        #expect(cfg.get() == exp)
-        #expect(cfg.get(or: !exp) == exp)
-        #expect(cfg.boolean() == exp)
-        #expect(cfg.boolean(or: !exp) == exp)
-    }
-
-    func token() async throws {
-        let cfg = Config((1, "a"))
-        let exp: (UInt, String) = (1, "a")
-
-        #expect(cfg == .init((1, "a")))
-        #expect(cfg.get()! == exp)
-        #expect(cfg.get(or: (2, "b")) == exp)
-        #expect(cfg.token()! == exp)
-        #expect(cfg.token(or: (2, "b")) == exp)
-    }
-
-    @Test(arguments: [
-        (Config(["a": 1]), 1),
-        (Config(["a": 2] as [NSString: Any]), 2),
-        (Config(["a": 3] as [NSString: Config]), 3),
-        (Config([BinaryDistinctString("a"): 4] as [BinaryDistinctString: Config]), 4),
-        (Config(["a": Config(5)]), 5),
-        (Config(["a": 6]), 6),
-        (Config((BinaryDistinctString("a"), 7)), 7),
-    ])
-    func dictionary(cfg: Config, exp: Int) async throws {
-        #expect(cfg["a"] == Config(exp))
-        #expect(cfg.get(or: [:])["a"] == Config(exp))
-    }
-
     @Test(arguments: [
         (Config.Data.integer(1), Config.Data.integer(2)),
         (Config.Data.string("a"), Config.Data.string("2")),
@@ -300,6 +218,90 @@ import Jinja
     }
 }
 
+@Suite struct ConfigEquatable {
+    @Test func string() async throws {
+        let cfg = Config("a")
+
+        #expect(cfg == "a")
+        #expect(cfg.get() == "a")
+        #expect(cfg.get(or: "b") == "a")
+        #expect(cfg.string() == "a")
+        #expect(cfg.string(or: "b") == "a")
+        #expect(cfg.get() == BinaryDistinctString("a"))
+        #expect(cfg.get(or: "b") == BinaryDistinctString("a"))
+        #expect(cfg.binaryDistinctString() == "a")
+        #expect(cfg.binaryDistinctString(or: "b") == "a")
+    }
+
+    @Test func integer() async throws {
+        let cfg = Config(1)
+
+        #expect(cfg == 1)
+        #expect(cfg.get() == 1)
+        #expect(cfg.get(or: 2) == 1)
+        #expect(cfg.integer() == 1)
+        #expect(cfg.integer(or: 2) == 1)
+    }
+
+    @Test(arguments: [
+        (Config(1.1), 1.1 as Float),
+        (Config(1), 1.0 as Float),
+    ])
+    func floating(cfg: Config, exp: Float) async throws {
+        #expect(cfg == .init(exp))
+        #expect(cfg.get() == exp)
+        #expect(cfg.get(or: 2.2) == exp)
+        #expect(cfg.floating() == exp)
+        #expect(cfg.floating(or: 2.2) == exp)
+    }
+
+    @Test(arguments: [
+        (Config(true), true),
+        (Config(1), true),
+        (Config("T"), true),
+        (Config("t"), true),
+        (Config("TRUE"), true),
+        (Config("True"), true),
+        (Config("true"), true),
+        (Config("F"), false),
+        (Config("f"), false),
+        (Config("FALSE"), false),
+        (Config("False"), false),
+        (Config("false"), false),
+    ])
+    func boolean(cfg: Config, exp: Bool) async throws {
+        #expect(cfg.get() == exp)
+        #expect(cfg.get(or: !exp) == exp)
+        #expect(cfg.boolean() == exp)
+        #expect(cfg.boolean(or: !exp) == exp)
+    }
+
+    @Test func token() async throws {
+        let cfg = Config((1, "a"))
+        let exp: (UInt, String) = (1, "a")
+
+        #expect(cfg == .init((1, "a")))
+        #expect(cfg.get()! == exp)
+        #expect(cfg.get(or: (2, "b")) == exp)
+        #expect(cfg.token()! == exp)
+        #expect(cfg.token(or: (2, "b")) == exp)
+    }
+
+    @Test(arguments: [
+        (Config(["a": 1]), 1),
+        (Config(["a": 2] as [NSString: Any]), 2),
+        (Config(["a": 3] as [NSString: Config]), 3),
+        (Config([BinaryDistinctString("a"): 4] as [BinaryDistinctString: Config]), 4),
+        (Config(["a": Config(5)]), 5),
+        (Config(["a": 6]), 6),
+        (Config((BinaryDistinctString("a"), 7)), 7),
+    ])
+    func dictionary(cfg: Config, exp: Int) async throws {
+        #expect(cfg["a"] == Config(exp))
+        #expect(cfg.get(or: [:])["a"] == Config(exp))
+    }
+}
+
 @Suite struct ConfigTextEncoding {
     private func createFile(with content: String, encoding: String.Encoding, fileName: String) throws -> URL {
         let tempDir = FileManager.default.temporaryDirectory
@@ -383,54 +385,54 @@ import Jinja
             "null": Config(),
         ])
         let template = """
-        {{ config["dict_of_floats"]["key1"] }}
-        {{ config["dict_of_tokens"]["key6"]["12"] }}
-        {{ config["arr_of_ints"][0] }}
-        {{ config["arr_of_ints"][1] }}
-        {{ config["arr_of_ints"][2] }}
-        {{ config["arr_of_floats"][0] }}
-        {{ config["arr_of_floats"][1] }}
-        {{ config["arr_of_strings"][0] }}
-        {{ config["arr_of_strings"][1] }}
-        {{ config["arr_of_bools"][0] }}
-        {{ config["arr_of_bools"][1] }}
-        {{ config["arr_of_dicts"][0]["key7"] }}
-        {{ config["arr_of_dicts"][1]["key8"] }}
-        {{ config["arr_of_tokens"][0]["1"] }}
-        {{ config["arr_of_tokens"][1]["2"] }}
-        {{ config["int"] }}
-        {{ config["float"] }}
-        {{ config["string"] }}
-        {{ config["bool"] }}
-        {{ config["token"]["1"] }}
-        """
+            {{ config["dict_of_floats"]["key1"] }}
+            {{ config["dict_of_tokens"]["key6"]["12"] }}
+            {{ config["arr_of_ints"][0] }}
+            {{ config["arr_of_ints"][1] }}
+            {{ config["arr_of_ints"][2] }}
+            {{ config["arr_of_floats"][0] }}
+            {{ config["arr_of_floats"][1] }}
+            {{ config["arr_of_strings"][0] }}
+            {{ config["arr_of_strings"][1] }}
+            {{ config["arr_of_bools"][0] }}
+            {{ config["arr_of_bools"][1] }}
+            {{ config["arr_of_dicts"][0]["key7"] }}
+            {{ config["arr_of_dicts"][1]["key8"] }}
+            {{ config["arr_of_tokens"][0]["1"] }}
+            {{ config["arr_of_tokens"][1]["2"] }}
+            {{ config["int"] }}
+            {{ config["float"] }}
+            {{ config["string"] }}
+            {{ config["bool"] }}
+            {{ config["token"]["1"] }}
+            """
         let exp = """
-        1.1
-        dfe
-        1
-        2
-        3
-        1.1
-        1.2
-        tre
-        jeq
-        true
-        false
-        1.1
-        1.2
-        ghz
-        pkr
-        678
-        1.1
-        hha
-        true
-        iop
-        """
-        
+            1.1
+            dfe
+            1
+            2
+            3
+            1.1
+            1.2
+            tre
+            jeq
+            true
+            false
+            1.1
+            1.2
+            ghz
+            pkr
+            678
+            1.1
+            hha
+            true
+            iop
+            """
+
         let got = try Template(template).render([
-            "config": cfg.toJinjaCompatible(),
+            "config": cfg.toJinjaCompatible()
         ])
-        
+
         #expect(got == exp)
     }
 }

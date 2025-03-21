@@ -9,6 +9,7 @@ import OrderedCollections
 
 // MARK: - Configuration files with dynamic lookup
 
+@dynamicMemberLookup
 public struct Config: Hashable, Sendable,
     ExpressibleByStringLiteral,
     ExpressibleByIntegerLiteral,
@@ -36,23 +37,57 @@ public struct Config: Hashable, Sendable,
 
         public static func == (lhs: Data, rhs: Data) -> Bool {
             switch (lhs, rhs) {
-            case (.string(let lhs), .string(let rhs)):
-                return lhs == rhs
-            case (.integer(let lhs), .integer(let rhs)):
-                return lhs == rhs
-            case (.boolean(let lhs), .boolean(let rhs)):
-                return lhs == rhs
-            case (.floating(let lhs), .floating(let rhs)):
-                return lhs == rhs
+            case (.null, .null):
+                return true
+            case (.string(let lhs), _):
+                if let rhs = rhs.string() {
+                    return lhs == BinaryDistinctString(rhs)
+                }
+            case (.integer(let lhs), _):
+                if let rhs = rhs.integer() {
+                    return lhs == rhs
+                }
+            case (.boolean(let lhs), _):
+                if let rhs = rhs.boolean() {
+                    return lhs == rhs
+                }
+            case (.floating(let lhs), _):
+                if let rhs = rhs.floating() {
+                    return lhs == rhs
+                }
             case (.dictionary(let lhs), .dictionary(let rhs)):
-                return lhs == rhs  // TODO: ensure equatable
+                return lhs == rhs
             case (.array(let lhs), .array(let rhs)):
-                return lhs == rhs  // TODO: ensure equatable
+                return lhs == rhs
             case (.token(let lhs), .token(let rhs)):
-                return lhs == rhs  // TODO: ensure equatable
+                return lhs == rhs
             default:
                 return false
             }
+          
+            // right hand side might be a super set of left hand side
+            switch rhs {
+            case .string(let rhs):
+                if let lhs = lhs.string() {
+                    return BinaryDistinctString(lhs) == rhs
+                }
+            case .integer(let rhs):
+                if let lhs = lhs.integer() {
+                    return lhs == rhs
+                }
+            case .boolean(let rhs):
+                if let lhs = lhs.boolean() {
+                    return lhs == rhs
+                }
+            case .floating(let rhs):
+                if let lhs = lhs.floating() {
+                    return lhs == rhs
+                }
+            default:
+                return false
+            }
+            
+            return false
         }
 
         public var description: String {
@@ -74,6 +109,52 @@ public struct Config: Hashable, Sendable,
             case .token(let val):
                 return "(\(val.0), \(val.1))"
             }
+        }
+        
+        
+        public func string() -> String? {
+            if case .string(let val) = self {
+                return val.string
+            }
+            return nil
+        }
+
+        
+        public func boolean() -> Bool? {
+            if case .boolean(let val) = self {
+                return val
+            }
+            if case .integer(let val) = self {
+                return val == 1
+            }
+            if case .string(let val) = self {
+                switch val.string.lowercased() {
+                case "true", "t", "1":
+                    return true
+                case "false", "f", "0":
+                    return false
+                default:
+                    return nil
+                }
+            }
+            return nil
+        }
+        
+        public func integer() -> Int? {
+            if case .integer(let val) = self {
+                return val
+            }
+            return nil
+        }
+        
+        public func floating() -> Float? {
+            if case .floating(let val) = self {
+                return val
+            }
+            if case .integer(let val) = self {
+                return Float(val)
+            }
+            return nil
         }
     }
 
@@ -218,12 +299,9 @@ public struct Config: Hashable, Sendable,
     }
 
     public func string() -> String? {
-        if case .string(let val) = self.value {
-            return val.string
-        }
-        return nil
+        return self.value.string()
     }
-
+    
     public func string(or: String) -> String {
         if let val: String = self.string() {
             return val
@@ -264,25 +342,9 @@ public struct Config: Hashable, Sendable,
     }
 
     public func boolean() -> Bool? {
-        if case .boolean(let val) = self.value {
-            return val
-        }
-        if case .integer(let val) = self.value {
-            return val == 1
-        }
-        if case .string(let val) = self.value {
-            switch val.string.lowercased() {
-            case "true", "t", "1":
-                return true
-            case "false", "f", "0":
-                return false
-            default:
-                return nil
-            }
-        }
-        return nil
+        return self.value.boolean()
     }
-
+        
     public func boolean(or: Bool) -> Bool {
         if let val = self.boolean() {
             return val
@@ -301,13 +363,10 @@ public struct Config: Hashable, Sendable,
     }
 
     public func integer() -> Int? {
-        if case .integer(let val) = self.value {
-            return val
-        }
-        return nil
+        return self.value.integer()
     }
-
-    public func integer(or: Int) -> Int? {
+    
+    public func integer(or: Int) -> Int {
         if let val = self.integer() {
             return val
         }
@@ -317,7 +376,7 @@ public struct Config: Hashable, Sendable,
     // MARK: getters/operators - floating
 
     public func get() -> Float? {
-        return self.floating()
+        return self.value.floating()
     }
 
     public func get(or: Float) -> Float? {
@@ -325,17 +384,11 @@ public struct Config: Hashable, Sendable,
     }
 
     public func floating() -> Float? {
-        if case .floating(let val) = self.value {
-            return val
-        }
-        if case .integer(let val) = self.value {
-            return Float(val)
-        }
-        return nil
+        return self.value.floating()
     }
-
-    public func floating(or: Float) -> Float? {
-        if let val = self.floating() {
+    
+    public func floating(or: Float) -> Float {
+        if let val = self.value.floating() {
             return val
         }
         return or
@@ -346,7 +399,7 @@ public struct Config: Hashable, Sendable,
     public func get() -> [BinaryDistinctString: Int]? {
         if let dict = self.dictionary() {
             return dict.reduce(into: [:]) { result, element in
-                if let val = element.value.integer() {
+                if let val = element.value.value.integer() {
                     result[element.key] = val
                 }
             }
@@ -407,7 +460,7 @@ public struct Config: Hashable, Sendable,
     public func get() -> [String]? {
         if let arr = self.array() {
             return arr.reduce(into: []) { result, element in
-                if let val: String = element.string() {
+                if let val: String = element.value.string() {
                     result.append(val)
                 }
             }
@@ -509,6 +562,17 @@ public struct Config: Hashable, Sendable,
             }
 
             return Config()
+        }
+    }
+    
+    
+    public subscript(dynamicMember member: String) -> Config? {
+        get {
+            if let dict = self.dictionary() {
+                return dict[BinaryDistinctString(member)] ?? dict[self.uncamelCase(BinaryDistinctString(member))] ?? Config()
+            }
+
+            return nil // backward compatibility
         }
     }
 
@@ -684,13 +748,7 @@ extension Config: Codable {
 
 extension Config: Equatable {
     public static func == (lhs: Config, rhs: Config) -> Bool {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-
-        guard let lhsData = try? encoder.encode(lhs),
-            let rhsData = try? encoder.encode(rhs)
-        else { return false }
-        return lhsData == rhsData
+        return lhs.value == rhs.value
     }
 }
 
