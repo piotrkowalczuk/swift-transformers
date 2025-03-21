@@ -47,15 +47,15 @@ public class BertTokenizer {
     }
 
     public required convenience init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String: Int]) throws {
-        guard let vocab = tokenizerData["model"]["vocab"].dictionary() else {
+        guard let vocab = tokenizerData.model.vocab.dictionary() else {
             throw TokenizerError.missingVocab
         }
-        let merges: [String]? = tokenizerData["model"]["merges"].get()
-        let tokenizeChineseChars = tokenizerConfig["handleChineseChars"].boolean(or: true)
-        let eosToken = tokenizerConfig["eosToken"].string()
-        let bosToken = tokenizerConfig["bosToken"].string()
-        let fuseUnknown = tokenizerConfig["fuseUnk"].boolean(or: false)
-        let doLowerCase = tokenizerConfig["doLowerCase"].boolean(or: true)
+        let merges: [String]? = tokenizerData.model.merges.get()
+        let tokenizeChineseChars = tokenizerConfig.handleChineseChars.boolean(or: true)
+        let eosToken = tokenizerConfig.eosToken.string()
+        let bosToken = tokenizerConfig.bosToken.string()
+        let fuseUnknown = tokenizerConfig.fuseUnk.boolean(or: false)
+        let doLowerCase = tokenizerConfig.doLowerCase.boolean(or: true)
 
         let vocabulary = vocab.reduce(into: [String: Int]()) { result, element in
             if let val = element.value.integer() {

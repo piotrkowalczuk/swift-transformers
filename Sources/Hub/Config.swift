@@ -574,6 +574,16 @@ public struct Config: Hashable, Sendable,
 
             return nil // backward compatibility
         }
+    } 
+    
+    public subscript(dynamicMember member: String) -> Config {
+        get {
+            if let dict = self.dictionary() {
+                return dict[BinaryDistinctString(member)] ?? dict[self.uncamelCase(BinaryDistinctString(member))] ?? Config()
+            }
+
+            return Config()
+        }
     }
 
     func uncamelCase(_ string: BinaryDistinctString) -> BinaryDistinctString {

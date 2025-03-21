@@ -36,7 +36,7 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
     private let trie: Trie<Character>
         
     required init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String : Int]) throws {
-        guard let configVocab = tokenizerData["model"]["vocab"].array() else {
+        guard let configVocab = tokenizerData.model.vocab.array() else {
             throw TokenizerError.missingVocab
         }
         
@@ -66,14 +66,14 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
             min(partial, token.score)
         }
         
-        guard let unknownTokenId = tokenizerData["model"]["unkId"].integer() else { throw TokenizerError.malformedVocab }
+        guard let unknownTokenId = tokenizerData.model["unkId"].integer() else { throw TokenizerError.malformedVocab }
         self.unknownTokenId = unknownTokenId
         self.unknownPiece = SentencePieceToken(token: vocab[unknownTokenId].token, score: minScore - 10)
         
         tokensToIds = Dictionary(uniqueKeysWithValues: vocab.map { $0.token as NSString }.enumerated().map { ($1, $0) })
         bosTokenId = tokensToIds[bosToken! as NSString]      // May be nil
 
-        eosToken = tokenizerConfig["eosToken"].string()
+        eosToken = tokenizerConfig.eosToken.string()
         eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken! as NSString]
 
         trie = Trie()

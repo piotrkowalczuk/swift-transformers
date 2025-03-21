@@ -105,7 +105,7 @@ public class LanguageModelConfigurationFromHub {
         get async throws {
             if let hubConfig = try await configPromise!.value.tokenizerConfig {
                 // Try to guess the class if it's not present and the modelType is
-                if let _: String = hubConfig["tokenizerClass"].string() { return hubConfig }
+                if let _: String = hubConfig.tokenizerClass?.string() { return hubConfig }
                 guard let modelType = try await modelType else { return hubConfig }
 
                 // If the config exists but doesn't contain a tokenizerClass, use a fallback config if we have it
@@ -134,7 +134,7 @@ public class LanguageModelConfigurationFromHub {
 
     public var modelType: String? {
         get async throws {
-            try await modelConfig["modelType"].string()
+            try await modelConfig.modelType.string()
         }
     }
 
@@ -196,7 +196,7 @@ public class LanguageModelConfigurationFromHub {
             let chatTemplateURL = modelFolder.appending(path: "chat_template.json")
             if FileManager.default.fileExists(atPath: chatTemplateURL.path),
                let chatTemplateConfig = try? hubApi.configuration(fileURL: chatTemplateURL),
-               let chatTemplate = chatTemplateConfig["chatTemplate"].string() {
+               let chatTemplate = chatTemplateConfig.chatTemplate.string() {
                 // Create or update tokenizer config with chat template
                 if var configDict = tokenizerConfig?.dictionary() {
                     configDict["chat_template"] = .init(chatTemplate)

@@ -64,8 +64,8 @@ class BPETokenizer: PreTrainedTokenizerModel {
     }
 
     required init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String: Int]) throws {
-        guard let merges = Self.mergesFromConfig(tokenizerData["model"]["merges"]) else { fatalError("BPETokenizer requires merges") }
-        guard let vocab = tokenizerData["model"]["vocab"].dictionary() else {
+        guard let merges = Self.mergesFromConfig(tokenizerData.model.merges) else { fatalError("BPETokenizer requires merges") }
+        guard let vocab = tokenizerData.model.vocab.dictionary() else {
             throw TokenizerError.missingVocab
         }
         var bpeRanks: [BytePair: Int] = [:]
@@ -93,13 +93,13 @@ class BPETokenizer: PreTrainedTokenizerModel {
             self.unknownTokenId = nil
         }
 
-        eosToken = addedTokenAsString(tokenizerConfig["eosToken"])
+        eosToken = addedTokenAsString(tokenizerConfig.eosToken)
         eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken! as NSString]
 
-        bosToken = addedTokenAsString(tokenizerConfig["bosToken"])
+        bosToken = addedTokenAsString(tokenizerConfig.bosToken)
         bosTokenId = bosToken == nil ? nil : tokensToIds[bosToken! as NSString]
 
-        fuseUnknownTokens = tokenizerConfig["fuseUnk"].boolean(or: false)
+        fuseUnknownTokens = tokenizerConfig.fuseUnk.boolean(or: false)
     }
 
     func convertTokenToId(_ token: String) -> Int? {
