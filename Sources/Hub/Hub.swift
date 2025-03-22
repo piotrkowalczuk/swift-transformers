@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Hub { }
+public struct Hub: Sendable {}
 
 public extension Hub {
     enum HubClientError: LocalizedError {
@@ -68,22 +68,22 @@ public extension Hub {
     }
 }
 
-public class LanguageModelConfigurationFromHub {
+public final class LanguageModelConfigurationFromHub: Sendable {
     struct Configurations {
         var modelConfig: Config
         var tokenizerConfig: Config?
         var tokenizerData: Config
     }
 
-    private var configPromise: Task<Configurations, Error>?
+    private let configPromise: Task<Configurations, Error>
 
     public init(
         modelName: String,
         revision: String = "main",
         hubApi: HubApi = .shared
     ) {
-        configPromise = Task.init {
-            try await self.loadConfig(modelName: modelName, revision: revision, hubApi: hubApi)
+        self.configPromise = Task.init {
+            return try await Self.loadConfig(modelName: modelName, hubApi: hubApi)
         }
     }
 
@@ -91,20 +91,20 @@ public class LanguageModelConfigurationFromHub {
         modelFolder: URL,
         hubApi: HubApi = .shared
     ) {
-        configPromise = Task {
-            try await self.loadConfig(modelFolder: modelFolder, hubApi: hubApi)
+        self.configPromise = Task {
+            return try await Self.loadConfig(modelFolder: modelFolder, hubApi: hubApi)
         }
     }
 
     public var modelConfig: Config {
         get async throws {
-            try await configPromise!.value.modelConfig
+            try await configPromise.value.modelConfig
         }
     }
 
     public var tokenizerConfig: Config? {
         get async throws {
-            if let hubConfig = try await configPromise!.value.tokenizerConfig {
+            if let hubConfig = try await configPromise.value.tokenizerConfig {
                 // Try to guess the class if it's not present and the modelType is
                 if let _: String = hubConfig.tokenizerClass?.string() { return hubConfig }
                 guard let modelType = try await modelType else { return hubConfig }
@@ -129,7 +129,7 @@ public class LanguageModelConfigurationFromHub {
 
     public var tokenizerData: Config {
         get async throws {
-            try await configPromise!.value.tokenizerData
+            try await configPromise.value.tokenizerData
         }
     }
 
@@ -139,7 +139,7 @@ public class LanguageModelConfigurationFromHub {
         }
     }
 
-    func loadConfig(
+    static func loadConfig(
         modelName: String,
         revision: String,
         hubApi: HubApi = .shared
@@ -167,7 +167,7 @@ public class LanguageModelConfigurationFromHub {
         }
     }
 
-    func loadConfig(
+    static func loadConfig(
         modelFolder: URL,
         hubApi: HubApi = .shared
     ) async throws -> Configurations {
