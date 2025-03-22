@@ -64,7 +64,7 @@ public struct Config: Hashable, Sendable,
             default:
                 return false
             }
-          
+
             // right hand side might be a super set of left hand side
             switch rhs {
             case .string(let rhs):
@@ -86,7 +86,7 @@ public struct Config: Hashable, Sendable,
             default:
                 return false
             }
-            
+
             return false
         }
 
@@ -110,8 +110,7 @@ public struct Config: Hashable, Sendable,
                 return "(\(val.0), \(val.1))"
             }
         }
-        
-        
+
         public func string() -> String? {
             if case .string(let val) = self {
                 return val.string
@@ -119,7 +118,6 @@ public struct Config: Hashable, Sendable,
             return nil
         }
 
-        
         public func boolean() -> Bool? {
             if case .boolean(let val) = self {
                 return val
@@ -139,14 +137,14 @@ public struct Config: Hashable, Sendable,
             }
             return nil
         }
-        
+
         public func integer() -> Int? {
             if case .integer(let val) = self {
                 return val
             }
             return nil
         }
-        
+
         public func floating() -> Float? {
             if case .floating(let val) = self {
                 return val
@@ -301,7 +299,7 @@ public struct Config: Hashable, Sendable,
     public func string() -> String? {
         return self.value.string()
     }
-    
+
     public func string(or: String) -> String {
         if let val: String = self.string() {
             return val
@@ -344,7 +342,7 @@ public struct Config: Hashable, Sendable,
     public func boolean() -> Bool? {
         return self.value.boolean()
     }
-        
+
     public func boolean(or: Bool) -> Bool {
         if let val = self.boolean() {
             return val
@@ -365,7 +363,7 @@ public struct Config: Hashable, Sendable,
     public func integer() -> Int? {
         return self.value.integer()
     }
-    
+
     public func integer(or: Int) -> Int {
         if let val = self.integer() {
             return val
@@ -386,7 +384,7 @@ public struct Config: Hashable, Sendable,
     public func floating() -> Float? {
         return self.value.floating()
     }
-    
+
     public func floating(or: Float) -> Float {
         if let val = self.value.floating() {
             return val
@@ -564,18 +562,17 @@ public struct Config: Hashable, Sendable,
             return Config()
         }
     }
-    
-    
+
     public subscript(dynamicMember member: String) -> Config? {
         get {
             if let dict = self.dictionary() {
                 return dict[BinaryDistinctString(member)] ?? dict[self.uncamelCase(BinaryDistinctString(member))] ?? Config()
             }
 
-            return nil // backward compatibility
+            return nil  // backward compatibility
         }
-    } 
-    
+    }
+
     public subscript(dynamicMember member: String) -> Config {
         get {
             if let dict = self.dictionary() {

@@ -39,11 +39,11 @@ public struct BinaryDistinctString: Equatable, Hashable, Sendable, Comparable, C
     public init(_ str: String) {
         self.init(str as NSString)
     }
-    
+
     public init(_ character: BinaryDistinctCharacter) {
         self.value = character.bytes
     }
-    
+
     public init(_ characters: [BinaryDistinctCharacter]) {
         var data: [UInt16] = []
         for character in characters {
@@ -64,11 +64,11 @@ public struct BinaryDistinctString: Equatable, Hashable, Sendable, Comparable, C
     public static func < (lhs: BinaryDistinctString, rhs: BinaryDistinctString) -> Bool {
         return lhs.value.lexicographicallyPrecedes(rhs.value)
     }
-    
+
     public static func + (lhs: BinaryDistinctString, rhs: BinaryDistinctString) -> BinaryDistinctString {
         return BinaryDistinctString(lhs.value + rhs.value)
     }
-    
+
     public func hasPrefix(_ prefix: BinaryDistinctString) -> Bool {
         guard prefix.value.count <= self.value.count else { return false }
         return self.value.starts(with: prefix.value)
@@ -78,11 +78,11 @@ public struct BinaryDistinctString: Equatable, Hashable, Sendable, Comparable, C
         guard suffix.value.count <= self.value.count else { return false }
         return self.value.suffix(suffix.value.count) == suffix.value
     }
-    
+
     public func lowercased() -> BinaryDistinctString {
         .init(self.string.lowercased())
     }
-    
+
     public func replacingOccurrences(of: Self, with: Self) -> BinaryDistinctString {
         return BinaryDistinctString(self.string.replacingOccurrences(of: of.string, with: with.string))
     }
@@ -101,11 +101,11 @@ extension BinaryDistinctString {
         }
         return newIndex
     }
-    
+
     public func index(_ i: Index, offsetBy distance: Int, limitedBy limit: Index) -> Index? {
-            let newIndex = i + distance
-            return newIndex <= limit ? newIndex : nil
-        }
+        let newIndex = i + distance
+        return newIndex <= limit ? newIndex : nil
+    }
 }
 
 extension BinaryDistinctString: Sequence {
@@ -165,7 +165,7 @@ extension Dictionary where Key == BinaryDistinctString {
     public mutating func merge(_ other: [BinaryDistinctString: Value], strategy: (Value, Value) -> Value = { _, new in new }) {
         self.merge(other, uniquingKeysWith: strategy)
     }
-    
+
     /// Merges a `[String: Value]` dictionary into this one
     public mutating func merge(_ other: [String: Value], strategy: (Value, Value) -> Value = { _, new in new }) {
         let converted = Dictionary(uniqueKeysWithValues: other.map { (BinaryDistinctString($0.key), $0.value) })
@@ -183,7 +183,7 @@ extension Dictionary where Key == BinaryDistinctString {
         newDict.merge(other, strategy: strategy)
         return newDict
     }
-    
+
     public func merging(_ other: [BinaryDistinctString: Value], strategy: (Value, Value) -> Value = { _, new in new }) -> Self {
         var newDict = self
         newDict.merge(other, strategy: strategy)
@@ -222,7 +222,7 @@ public struct BinaryDistinctCharacter: Equatable, Hashable, CustomStringConverti
     public init(bytes: [UInt16]) {
         self.bytes = bytes
     }
-    
+
     /// Satisfies ``ExpressibleByStringLiteral`` protocol.
     public init(stringLiteral value: String) {
         self.init(value)
